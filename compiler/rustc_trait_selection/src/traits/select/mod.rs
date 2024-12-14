@@ -356,6 +356,10 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
         let (candidate, dep_node) =
             self.in_task(|this| this.candidate_from_obligation_no_cache(stack));
 
+        // if let Err(e) = &candidate {
+        //     tracing::warn!("candidate_from_obligation: candidate_from_obligation_no_cache with stack {:?} returned error: {:?}", stack, e);
+        // }
+
         debug!("CACHE MISS");
         self.insert_candidate_cache(
             stack.obligation.param_env,
@@ -454,6 +458,10 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                 Ok(eval) if eval.may_apply() => {
                     Ok(Some(EvaluatedCandidate { candidate: c, evaluation: eval }))
                 }
+                Ok(EvaluationResult::EvaluatedToErr) => {
+                    tracing::warn!("candidate_from_obligation_no_cache: evaluate_candidate with stack {:?} returned error", stack);
+                    Ok(None)
+                }
                 Ok(_) => Ok(None),
                 Err(OverflowError::Canonical) => Err(Overflow(OverflowError::Canonical)),
                 Err(OverflowError::Error(e)) => Err(Overflow(OverflowError::Error(e))),
@@ -514,7 +522,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                 return Ok(None);
             }
 
-            tracing::warn!("candidate_from_obligation_no_cache: returning Unimplemented with empty candidate for stack {:?}", stack);
+            // tracing::warn!("candidate_from_obligation_no_cache: returning Unimplemented with empty candidate for stack {:?}", stack);
 
             return Err(Unimplemented);
         }
@@ -555,6 +563,11 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
             if this.infcx.resolve_vars_if_possible(goal) != goal {
                 result = result.max(EvaluatedToAmbig);
             }
+
+            if let EvaluationResult::EvaluatedToErr = result {
+                tracing::warn!("evaluate_root_obligation: evaluation for obligation {:?} returned error", obligation);
+            }
+
             Ok(result)
         })
     }
@@ -1251,7 +1264,10 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
             Ok(Some(c)) => self.evaluate_candidate(stack, &c),
             Ok(None) => Ok(EvaluatedToAmbig),
             Err(Overflow(OverflowError::Canonical)) => Err(OverflowError::Canonical),
-            Err(..) => Ok(EvaluatedToErr),
+            Err(e) => {
+                tracing::warn!("evaluate_stack: candidate_from_obligation for stack {:?} returned error: {:?}", stack, e);
+                Ok(EvaluatedToErr)
+            }
         }
     }
 
