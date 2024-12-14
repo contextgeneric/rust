@@ -1876,7 +1876,10 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                         if !errors.is_empty() {
                             for error in errors.iter() {
                                 if let ScrubbedTraitError::Pending(obligations) = error {
-                                    err.note(format!("pending obligations: {:?}", obligations));
+                                    for obligation in obligations {
+                                        let predicate = &obligation.predicate;
+                                        err.help(format!("the following constraint is not satisfied: {}", predicate));
+                                    }
                                 }
                             }
 
