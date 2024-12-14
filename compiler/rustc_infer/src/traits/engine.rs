@@ -21,12 +21,13 @@ pub enum ScrubbedTraitError<'tcx> {
     Ambiguity,
     /// An old-solver-style cycle error, which will fatal.
     Cycle(PredicateObligations<'tcx>),
+    Pending(Vec<PredicateObligation<'tcx>>),
 }
 
 impl<'tcx> ScrubbedTraitError<'tcx> {
     pub fn is_true_error(&self) -> bool {
         match self {
-            ScrubbedTraitError::TrueError => true,
+            ScrubbedTraitError::TrueError | ScrubbedTraitError::Pending(_) => true,
             ScrubbedTraitError::Ambiguity | ScrubbedTraitError::Cycle(_) => false,
         }
     }

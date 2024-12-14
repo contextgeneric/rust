@@ -459,7 +459,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                     Ok(Some(EvaluatedCandidate { candidate: c, evaluation: eval }))
                 }
                 Ok(EvaluationResult::EvaluatedToErr) => {
-                    tracing::warn!("candidate_from_obligation_no_cache: evaluate_candidate with stack {:?} returned error", stack);
+                    tracing::warn!("candidate_from_obligation_no_cache: evaluate_candidate for candidate {:?} with stack {:?} returned error", c, stack);
                     Ok(None)
                 }
                 Ok(_) => Ok(None),
@@ -1261,7 +1261,15 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
         }
 
         match self.candidate_from_obligation(stack) {
-            Ok(Some(c)) => self.evaluate_candidate(stack, &c),
+            Ok(Some(c)) => {
+                let res = self.evaluate_candidate(stack, &c);
+
+                // if let Err(e) = &res {
+                //     tracing::warn!("evaluate_stack: evaluate_candidate for stack {:?} and candidate {:?} returned error: {:?}", stack, c, e);
+                // }
+
+                res
+            }
             Ok(None) => Ok(EvaluatedToAmbig),
             Err(Overflow(OverflowError::Canonical)) => Err(OverflowError::Canonical),
             Err(e) => {

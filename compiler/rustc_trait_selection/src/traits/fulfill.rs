@@ -945,9 +945,18 @@ impl<'tcx> FromSolverError<'tcx, OldSolverError<'tcx>> for FulfillmentError<'tcx
 
 impl<'tcx> FromSolverError<'tcx, OldSolverError<'tcx>> for ScrubbedTraitError<'tcx> {
     fn from_solver_error(_infcx: &InferCtxt<'tcx>, error: OldSolverError<'tcx>) -> Self {
+        tracing::warn!("converting solver error to ScrubbedTraitError: {:?}", error.0);
+
         match error.0.error {
-            FulfillmentErrorCode::Select(_)
-            | FulfillmentErrorCode::Project(_)
+            FulfillmentErrorCode::Select(_) => {
+                let pendings = error.0.backtrace
+                    .into_iter()
+                    .map(|p| p.obligation)
+                    .collect();
+
+                ScrubbedTraitError::Pending(pendings)
+            }
+            FulfillmentErrorCode::Project(_)
             | FulfillmentErrorCode::Subtype(_, _)
             | FulfillmentErrorCode::ConstEquate(_, _) => ScrubbedTraitError::TrueError,
             FulfillmentErrorCode::Ambiguity { overflow: _ } => ScrubbedTraitError::Ambiguity,

@@ -29,7 +29,7 @@ use rustc_middle::ty::{
 use rustc_middle::{bug, span_bug};
 use rustc_span::symbol::sym;
 use rustc_span::{BytePos, DUMMY_SP, Span, Symbol};
-use tracing::{debug, info, instrument};
+use tracing::{debug, instrument};
 
 use super::on_unimplemented::{AppendConstMessage, OnUnimplementedNote};
 use super::suggestions::get_explanation_based_on_obligation;
@@ -62,6 +62,8 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
         root_obligation: &PredicateObligation<'tcx>,
         error: &SelectionError<'tcx>,
     ) -> ErrorGuaranteed {
+        tracing::warn!("reporting selection error for {:?}: {:?}", obligation, error);
+
         let tcx = self.tcx;
         let mut span = obligation.cause.span;
 
@@ -1707,7 +1709,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
             impl_candidates
         };
 
-        info!("impl_candidates: {:?}\n", impl_candidates);
+        tracing::warn!("impl_candidates: {:?}\n", impl_candidates);
         // err.note(impl_candidates_str);
 
         // We'll check for the case where the reason for the mismatch is that the trait comes from
@@ -1817,6 +1819,9 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
         }
 
         if let [single] = &impl_candidates {
+
+            tracing::warn!("report_similar_impl_candidates: probing for single candidate: {:?}", single);
+
             // If we have a single implementation, try to unify it with the trait ref
             // that failed. This should uncover a better hint for what *is* implemented.
             if self.probe(|_| {
@@ -1844,7 +1849,10 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                                 )
                             }),
                     );
-                    if !ocx.select_where_possible().is_empty() {
+
+                    let errors = ocx.select_where_possible();
+
+                    if !errors.is_empty() {
                         return false;
                     }
 
@@ -1860,7 +1868,11 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                         {
                             terrs.push(terr);
                         }
-                        if !ocx.select_where_possible().is_empty() {
+
+                        let errors = ocx.select_where_possible();
+                        tracing::warn!("report_similar_impl_candidates: select_where_possible returned errors: {:?}", errors);
+
+                        if !errors.is_empty() {
                             return false;
                         }
                     }
@@ -1971,7 +1983,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
 
         let other = if other { "other " } else { "" };
         let report = |mut candidates: Vec<TraitRef<'tcx>>, err: &mut Diag<'_>| {
-            info!("found all candidates: {candidates:?}");
+            tracing::warn!("found all candidates: {candidates:?}");
             candidates.retain(|tr| !tr.references_error());
             if candidates.is_empty() {
                 return false;
@@ -2594,7 +2606,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
             // Can't show anything else useful, try to find similar impls.
             let impl_candidates = self.find_similar_impl_candidates(trait_predicate);
 
-            info!("impl candidates for trait predicate {:?}: {:?}", trait_predicate, impl_candidates);
+            tracing::warn!("impl candidates for trait predicate {:?}: {:?}", trait_predicate, impl_candidates);
 
             if !self.report_similar_impl_candidates(
                 &impl_candidates,
