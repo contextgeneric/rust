@@ -28,7 +28,7 @@ use rustc_trait_selection::traits::outlives_bounds::InferCtxtExt as _;
 use rustc_trait_selection::traits::{
     self, FulfillmentError, ObligationCause, ObligationCauseCode, ObligationCtxt,
 };
-use tracing::{debug, instrument};
+use tracing::{debug, warn, instrument};
 
 use super::potentially_plural_count;
 use crate::errors::{LifetimesOrBoundsMismatchOnTrait, MethodShouldReturnFuture};
@@ -354,6 +354,7 @@ fn compare_method_predicate_entailment<'tcx>(
         // FIXME(-Znext-solver): Not needed when the hack below is removed.
         let errors = ocx.select_where_possible();
         if !errors.is_empty() {
+            warn!("encounter fulfillment errors: {:?}", errors);
             let reported = infcx.err_ctxt().report_fulfillment_errors(errors);
             return Err(reported);
         }
@@ -410,6 +411,7 @@ fn compare_method_predicate_entailment<'tcx>(
     // version.
     let errors = ocx.select_all_or_error();
     if !errors.is_empty() {
+        warn!("encounter fulfillment errors: {:?}", errors);
         let reported = infcx.err_ctxt().report_fulfillment_errors(errors);
         return Err(reported);
     }
@@ -1860,6 +1862,7 @@ fn compare_const_predicate_entailment<'tcx>(
     // version.
     let errors = ocx.select_all_or_error();
     if !errors.is_empty() {
+        warn!("encounter fulfillment errors: {:?}", errors);
         return Err(infcx.err_ctxt().report_fulfillment_errors(errors));
     }
 
@@ -1991,6 +1994,7 @@ fn compare_type_predicate_entailment<'tcx>(
     // version.
     let errors = ocx.select_all_or_error();
     if !errors.is_empty() {
+        warn!("encounter fulfillment errors: {:?}", errors);
         let reported = infcx.err_ctxt().report_fulfillment_errors(errors);
         return Err(reported);
     }
@@ -2120,7 +2124,9 @@ pub(super) fn check_type_bounds<'tcx>(
     // Check that all obligations are satisfied by the implementation's
     // version.
     let errors = ocx.select_all_or_error();
+
     if !errors.is_empty() {
+        warn!("encounter fulfillment errors: {:?}", errors);
         let reported = infcx.err_ctxt().report_fulfillment_errors(errors);
         return Err(reported);
     }

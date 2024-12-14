@@ -173,6 +173,7 @@ where
                 let (changed, certainty) = match result {
                     Ok(result) => result,
                     Err(NoSolution) => {
+                        tracing::warn!("pushing true error inside select_where_possible");
                         errors.push(E::from_solver_error(
                             infcx,
                             NextSolverError::TrueError(obligation),

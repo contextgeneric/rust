@@ -5204,7 +5204,7 @@ pub(super) fn get_explanation_based_on_obligation<'tcx>(
         };
         if let ty::PredicatePolarity::Positive = trait_predicate.polarity() {
             format!(
-                "{pre_message}the trait `{}` is not implemented for{desc} `{}`",
+                "{pre_message}the bar trait `{}` is not implemented for{desc} `{}`",
                 trait_predicate.print_modifiers_and_trait_path(),
                 tcx.short_ty_string(trait_predicate.self_ty().skip_binder(), &mut None),
             )

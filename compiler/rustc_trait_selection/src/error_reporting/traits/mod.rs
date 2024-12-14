@@ -133,6 +133,7 @@ pub enum DefIdOrName {
 }
 
 impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
+    #[instrument(level = "debug", skip(self), ret)]
     pub fn report_fulfillment_errors(
         &self,
         mut errors: Vec<FulfillmentError<'tcx>>,

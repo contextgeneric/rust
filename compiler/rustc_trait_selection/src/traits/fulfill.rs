@@ -109,6 +109,10 @@ where
         let outcome: Outcome<_, _> =
             self.predicates.process_obligations(&mut FulfillProcessor { selcx });
 
+        if !outcome.errors.is_empty() {
+            tracing::warn!("process_obligations inside FulfillmentContext::select returned errors: {:?}", outcome);
+        }
+
         // FIXME: if we kept the original cache key, we could mark projection
         // obligations as complete for the projection cache here.
 
@@ -815,7 +819,7 @@ impl<'a, 'tcx> FulfillProcessor<'a, 'tcx> {
                 ProcessResult::Unchanged
             }
             Err(selection_err) => {
-                debug!("selecting trait at depth {} yielded Err", obligation.recursion_depth);
+                tracing::warn!("process_trait_obligation: poly_select with obligation {:?} returned error: {:?}", obligation, selection_err);
 
                 ProcessResult::Error(FulfillmentErrorCode::Select(selection_err))
             }

@@ -119,6 +119,7 @@ where
 
     let errors = wfcx.select_all_or_error();
     if !errors.is_empty() {
+        tracing::warn!("encounter fulfillment errors inside wfcheck: {:?}", errors);
         return Err(infcx.err_ctxt().report_fulfillment_errors(errors));
     }
 

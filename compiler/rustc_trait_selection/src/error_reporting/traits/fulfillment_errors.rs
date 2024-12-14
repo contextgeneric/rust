@@ -29,7 +29,7 @@ use rustc_middle::ty::{
 use rustc_middle::{bug, span_bug};
 use rustc_span::symbol::sym;
 use rustc_span::{BytePos, DUMMY_SP, Span, Symbol};
-use tracing::{debug, instrument};
+use tracing::{debug, info, instrument};
 
 use super::on_unimplemented::{AppendConstMessage, OnUnimplementedNote};
 use super::suggestions::get_explanation_based_on_obligation;
@@ -55,6 +55,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
     /// The `root_obligation` parameter should be the `root_obligation` field
     /// from a `FulfillmentError`. If no `FulfillmentError` is available,
     /// then it should be the same as `obligation`.
+    #[instrument(level = "debug", skip(self), ret)]
     pub fn report_selection_error(
         &self,
         mut obligation: PredicateObligation<'tcx>,
@@ -230,6 +231,8 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                             append_const_msg,
                             post_message,
                         );
+
+                        let err_msg = format!("found this error: {err_msg}");
 
                         let (err_msg, safe_transmute_explanation) = if self.tcx.is_lang_item(main_trait_ref.def_id(), LangItem::TransmuteTrait)
                         {
@@ -1627,6 +1630,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
         }
     }
 
+    #[instrument(level = "debug", skip(self), ret)]
     pub(super) fn find_similar_impl_candidates(
         &self,
         trait_pred: ty::PolyTraitPredicate<'tcx>,
@@ -1657,6 +1661,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
         candidates
     }
 
+    #[instrument(level = "debug", skip(self), ret)]
     pub(super) fn report_similar_impl_candidates(
         &self,
         impl_candidates: &[ImplCandidate<'tcx>],
@@ -1701,6 +1706,9 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
             impl_candidates.dedup();
             impl_candidates
         };
+
+        info!("impl_candidates: {:?}\n", impl_candidates);
+        // err.note(impl_candidates_str);
 
         // We'll check for the case where the reason for the mismatch is that the trait comes from
         // one crate version and the type comes from another crate version, even though they both
@@ -1963,6 +1971,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
 
         let other = if other { "other " } else { "" };
         let report = |mut candidates: Vec<TraitRef<'tcx>>, err: &mut Diag<'_>| {
+            info!("found all candidates: {candidates:?}");
             candidates.retain(|tr| !tr.references_error());
             if candidates.is_empty() {
                 return false;
@@ -1978,7 +1987,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                     };
                 err.highlighted_help(vec![
                     StringPart::normal(format!("the trait `{}` ", cand.print_trait_sugared())),
-                    StringPart::highlighted("is"),
+                    StringPart::highlighted("is (YES)"),
                     StringPart::normal(desc),
                     StringPart::highlighted(cand.self_ty().to_string()),
                     StringPart::normal("`"),
@@ -2077,6 +2086,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
         report(impl_candidates, err)
     }
 
+    #[instrument(level = "debug", skip(self), ret)]
     fn report_similar_impl_candidates_for_root_obligation(
         &self,
         obligation: &PredicateObligation<'tcx>,
@@ -2515,6 +2525,7 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
         }
     }
 
+    #[instrument(level = "debug", skip(self), ret)]
     fn try_to_add_help_message(
         &self,
         root_obligation: &PredicateObligation<'tcx>,
@@ -2582,6 +2593,9 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
         {
             // Can't show anything else useful, try to find similar impls.
             let impl_candidates = self.find_similar_impl_candidates(trait_predicate);
+
+            info!("impl candidates for trait predicate {:?}: {:?}", trait_predicate, impl_candidates);
+
             if !self.report_similar_impl_candidates(
                 &impl_candidates,
                 trait_predicate.to_poly_trait_ref(),

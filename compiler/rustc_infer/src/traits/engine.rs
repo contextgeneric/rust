@@ -78,6 +78,7 @@ pub trait TraitEngine<'tcx, E: 'tcx>: 'tcx {
     fn select_all_or_error(&mut self, infcx: &InferCtxt<'tcx>) -> Vec<E> {
         let errors = self.select_where_possible(infcx);
         if !errors.is_empty() {
+            tracing::warn!("select_where_possible returned errors");
             return errors;
         }
 

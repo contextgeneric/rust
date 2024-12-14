@@ -277,6 +277,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                 return Err(SelectionError::Overflow(OverflowError::Canonical));
             }
             Err(e) => {
+                tracing::warn!("poly_select: select_from_obligation with obligation {:?} returned error: {:?}", obligation, e);
                 return Err(e);
             }
             Ok(None) => {
@@ -290,7 +291,9 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                 assert!(self.query_mode == TraitQueryMode::Canonical);
                 Err(SelectionError::Overflow(OverflowError::Canonical))
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                Err(e)
+            }
             Ok(candidate) => Ok(Some(candidate)),
         }
     }
@@ -510,6 +513,9 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                 debug!(?stack.obligation.predicate, "found error type in predicate, treating as ambiguous");
                 return Ok(None);
             }
+
+            tracing::warn!("candidate_from_obligation_no_cache: returning Unimplemented with empty candidate for stack {:?}", stack);
+
             return Err(Unimplemented);
         }
 
