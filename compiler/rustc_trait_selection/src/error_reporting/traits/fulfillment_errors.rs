@@ -14,6 +14,7 @@ use rustc_hir::def_id::{DefId, LOCAL_CRATE, LocalDefId};
 use rustc_hir::intravisit::Visitor;
 use rustc_hir::{self as hir, LangItem, Node};
 use rustc_infer::infer::{InferOk, TypeTrace};
+use rustc_infer::traits::ScrubbedTraitError;
 use rustc_middle::traits::SignatureMismatchData;
 use rustc_middle::traits::select::OverflowError;
 use rustc_middle::ty::abstract_const::NotConstEvaluatable;
@@ -1873,6 +1874,12 @@ impl<'a, 'tcx> TypeErrCtxt<'a, 'tcx> {
                         tracing::warn!("report_similar_impl_candidates: select_where_possible returned errors: {:?}", errors);
 
                         if !errors.is_empty() {
+                            for error in errors.iter() {
+                                if let ScrubbedTraitError::Pending(obligations) = error {
+                                    err.note(format!("pending obligations: {:?}", obligations));
+                                }
+                            }
+
                             return false;
                         }
                     }
